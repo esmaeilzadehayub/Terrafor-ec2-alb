@@ -248,7 +248,7 @@ task_definition_json👎
 ]
 ```
 
-ECS-services.tf 👎
+ECS-services.tf �
 ```
 ##############################################################
 # AWS ECS-SERVICE
@@ -318,6 +318,7 @@ resource "aws_lb_listener" "lb_listener" {
 }
 ```
 ECS-cloudwatch.tf👎
+```
 resource "aws_cloudwatch_log_group" "log_group" {
   name = "openapi-devl-cw"
     tags = {
