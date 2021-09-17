@@ -11,7 +11,7 @@ AWS Elastic Container Service (ECS)
 ECS is Amazon’s Elastic Container Service. That’s greek for how you get docker containers running in the cloud. It’s sort of like Kubernetes
 Amazon Elastic Container Service (Amazon ECS) is a scalable, high-performance container orchestration service that supports Docker containers and allows you to easily run and scale containerized applications on AWS. ECS eliminates the need for you to install and operate your own container orchestration software, manage and scale a cluster of virtual machines, or schedule containers on those virtual machines
 On this page:-
-
+# create virtal private cloud 
 #Creating ECR registry for storing the docker image.
 
 #Creating Dockerfile and building the image.
@@ -32,8 +32,93 @@ On this page:-
 
 #Creating terraform code for IAM role
 
-Cre
-ECR Registry:-
+Create Virtual private cloud:
+```
+provider "aws" {}
+
+resource "aws_vpc" "vpc" {
+    cidr_block = "10.0.0.0/24"
+    enable_dns_support   = true
+    enable_dns_hostnames = true
+    tags       = {
+        Name = "Terraform VPC"
+    }
+}
+```
+Internet gateway
+```
+resource "aws_internet_gateway" "internet_gateway" {
+    vpc_id = aws_vpc.vpc.id
+}
+```
+Internet gateway
+```
+resource "aws_internet_gateway" "internet_gateway" {
+    vpc_id = aws_vpc.vpc.id
+}
+```
+Subnet
+Within the VPC let’s add a public subnet:
+```
+resource "aws_subnet" "pub_subnet" {
+    vpc_id                  = aws_vpc.vpc.id
+    cidr_block              = "10.1.0.0/22"
+}
+```
+Route Table
+```
+resource "aws_route_table" "public" {
+    vpc_id = aws_vpc.vpc.id
+
+    route {
+        cidr_block = "0.0.0.0/0"
+        gateway_id = aws_internet_gateway.internet_gateway.id
+    }
+}
+
+resource "aws_route_table_association" "route_table_association" {
+    subnet_id      = aws_subnet.pub_subnet.id
+    route_table_id = aws_route_table.public.id
+}
+```
+
+Security Groups
+
+Security groups works like a firewalls for the instances (where ACL works like a global firewall for the VPC). Because we allow all the traffic from the internet to and from the VPC we might set some rules to secure the instances themselves.
+```
+resource "aws_security_group" "ecs_sg" {
+    vpc_id      = aws_vpc.vpc.id
+
+    ingress {
+        from_port       = 22
+        to_port         = 22
+        protocol        = "tcp"
+        cidr_blocks     = ["0.0.0.0/0"]
+    }
+     ingress {
+        from_port       = 80
+        to_port         = 80
+        protocol        = "tcp"
+        cidr_blocks     = ["0.0.0.0/0"]
+    }
+
+    ingress {
+        from_port       = 443
+        to_port         = 443
+        protocol        = "tcp"
+        cidr_blocks     = ["0.0.0.0/0"]
+    }
+
+    egress {
+        from_port       = 0
+        to_port         = 65535
+        protocol        = "tcp"
+        cidr_blocks     = ["0.0.0.0/0"]
+    }
+}
+
+```
+Create ECR Registry:-
 
 ```python
  resource "aws_ecr_repository" "ecr" {
@@ -157,7 +242,6 @@ resource "aws_instance" "ec2_instance" {
   key_name               = "pnl-test" #CHANGE THIS
   ebs_optimized          = "false"
   source_dest_check      = "false"
-  user_data              = "${data.template_file.user_data.rendered}"
   root_block_device = {
     volume_type           = "gp2"
     volume_size           = "30"
@@ -172,6 +256,28 @@ resource "aws_instance" "ec2_instance" {
     ignore_changes         = ["ami", "user_data", "subnet_id", "key_name", "ebs_optimized", "private_ip"]
   }
 }
+
+provisioner "remote-exec" {
+    inline = ["sudo apt-get -qq install python -y"]
+  }
+  
+
+  
+   provisioner "local-exec" {
+	command = <<EOT
+    sleep 30;
+	  >java.ini;
+	  echo "[java]" | tee -a java.ini;
+	  echo "${aws_instance.ec2_instance.public_ip} ec2_user=${var.ec2_user} ec2_ssh_private_key_file=${var.private_key}" | tee -a java.ini;
+    export ANSIBLE_HOST_KEY_CHECKING=False;
+	  ansible-playbook -u ${var.ec2_user} --private-key ${var.private_key} -i java.ini install_java.yaml
+    EOT
+  }
+  
+    connection {
+    private_key = "${file(var.private_key)}"
+    user        = "ubuntu"
+  }
 
 data "template_file" "user_data" {
   template = "${file("${path.module}/user_data.tpl")}"
