@@ -4,10 +4,6 @@ Automating EC2-Type Deployments with Terraform
 
 
 
-
-ECS is Amazon’s Elastic Container Service. That’s greek for how you get docker containers running in the cloud. It’s sort of like Kubernetes
-Amazon Elastic Container Service (Amazon ECS) is a scalable, high-performance container orchestration service that supports Docker containers and allows you to easily run and scale containerized applications on AWS. ECS eliminates the need for you to install and operate your own container orchestration software, manage and scale a cluster of virtual machines, or schedule containers on those virtual machines
-On this page:-
 # create virtal private cloud 
 #Creating ECR registry for storing the docker image.
 
