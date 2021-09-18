@@ -15,14 +15,6 @@ On this page:-
 
 #Creating terraform code for IAM role
 
-#Creating tf file for ECS-EC2-instance
-
-#Creating ECS Task Definition
-
-#Creating ECS Service
-
-#Creating Application Load Balancer
-
 #Creating Route 53 hosted zone
 
 #Creating cloudwatch log group
