@@ -15,7 +15,8 @@ Automating EC2-Type Deployments with Terraform
 
 #Creating cloudwatch log group
 
-#Creating terraform code for IAM role
+#Creating ELB for EC2
+
 
 Create Virtual private cloud:
 ```
@@ -66,7 +67,7 @@ Security Groups
 
 Security groups works like a firewalls for the instances (where ACL works like a global firewall for the VPC). Because we allow all the traffic from the internet to and from the VPC we might set some rules to secure the instances themselves.
 ```
-resource "aws_security_group" "ecs_sg" {
+resource "aws_security_group" "ec2_sg" {
     vpc_id      = aws_vpc.vpc.id
 
     ingress {
@@ -161,6 +162,28 @@ docker tag e9ae3c220b23 aws_account_id.dkr.ecr.region.amazonaws.com/my-repositor
 ```
 
 
+Create ELB
+
+```
+resource "aws_lb" "app" {
+  name               = "main-app-lb"
+  internal           = false
+  load_balancer_type = "application"
+  subnets            = $aws_subnet.pub_subnet.id
+  security_groups    = $aws_security_group" "ec2_sg
+}
+
+resource "aws_lb_listener" "app" {
+  load_balancer_arn = aws_lb.app.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.blue.arn
+  }
+}
+
   EC2-instance.tf �
   ```python
   ###########################################################
@@ -174,6 +197,7 @@ resource "aws_instance" "ec2_instance" {
   vpc_security_group_ids = ["sg-01849003c4f9203ca"] #CHANGE THIS
   key_name               = "pnl-test" #CHANGE THIS
   ebs_optimized          = "false"
+  associate_public_ip_address = true
   source_dest_check      = "false"
   root_block_device = {
     volume_type           = "gp2"
