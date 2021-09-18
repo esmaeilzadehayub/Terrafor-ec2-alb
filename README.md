@@ -216,6 +216,7 @@ resource "aws_instance" "my-machine" {
   ami = var.ami
   instance_type = var.instance_type
   key_name = aws_key_pair.deployer.key_name
+  
   tags = {
     Name = "my-machine-${count.index}"
          }
@@ -236,7 +237,7 @@ resource "aws_instance" "my-machine" {
   }
    provisioner "file" {                    # Provisioner 3 [needs SSH/Winrm connection]
     source      = "*.yml"
-    destination = "/tmp/file.json"
+    destination = "/tmp/"
     connection {
       type        = "ssh"
       user        = "ubuntu"
@@ -246,6 +247,20 @@ resource "aws_instance" "my-machine" {
       timeout     = "30s"
     }
   }  
+  provisioner  "remote-exec" {            # Provisioner 2 [needs SSH/Winrm connection]
+      connection {
+      type        = "ssh"
+      user        = "ubuntu"
+      private_key = "${file("~/.ssh/id_rsa")}"
+      agent       = false
+      host        = aws_instance.my-machine.public_ip       # Using my instance to connect
+      timeout     = "30s"
+    }
+      inline = [
+        "sudo ansible-playbook -i localhost   /tmp/*.yml 
+        
+      ]
+  }
 }
 ```
 
