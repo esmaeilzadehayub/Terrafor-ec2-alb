@@ -180,80 +180,73 @@ resource "aws_lb_listener" "app" {
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.blue.arn
+    target_group_arn = aws_lb_target_group.my_taget_group.arn
   }
 }
+ resource "aws_lb_target_group" "my-target-group" {
+  health_check {
+    interval            = 10
+    path                = "/"
+    protocol            = "HTTP"
+    timeout             = 5
+    healthy_threshold   = 5
+    unhealthy_threshold = 2
+  }
 
+  name        = "my-test-tg"
+  port        = 80
+  protocol    = "HTTP"
+  target_type = "instance"
+  vpc_id      = "${var.vpc_id}"
+}
+resource "aws_lb_target_group_attachment" "my-alb-target-group-attachment1" {
+  target_group_arn = "${aws_lb_target_group.my-target-group.arn}"
+  target_id        = "${aws_instance.ec2_instance.id}"
+  port             = 80
+}
+```
   EC2-instance.tf �
   ```python
   ###########################################################
 # AWS ECS-EC2
 ###########################################################
-resource "aws_instance" "ec2_instance" {
-  ami                    = "ami-08935252a36e25f85"
-  subnet_id              =  "subnet-087e48d4db31e442d" #CHANGE THIS
-  instance_type          = "t2.medium"
-  iam_instance_profile   = "ecsInstanceRole" #CHANGE THIS
-  vpc_security_group_ids = ["sg-01849003c4f9203ca"] #CHANGE THIS
-  key_name               = "pnl-test" #CHANGE THIS
-  ebs_optimized          = "false"
-  associate_public_ip_address = true
-  source_dest_check      = "false"
-  root_block_device = {
-    volume_type           = "gp2"
-    volume_size           = "30"
-    delete_on_termination = "true"
-  }
-
-  tags {
-    Name                   = "openapi-ecs-ec2_instance"
-}
-
-  lifecycle {
-    ignore_changes         = ["ami", "user_data", "subnet_id", "key_name", "ebs_optimized", "private_ip"]
-  }
-}
-
-provisioner "remote-exec" {
-    inline = ["sudo apt-get -qq install python -y"]
-  }
+resource "aws_instance" "my-machine" {
+  count = 2    # Here we are creating identical 4 machines.
   
-
-  
-   provisioner "local-exec" {
-	command = <<EOT
-    sleep 30;
-	  >java.ini;
-	  echo "[java]" | tee -a java.ini;
-	  echo "${aws_instance.ec2_instance.public_ip} ec2_user=${var.ec2_user} ec2_ssh_private_key_file=${var.private_key}" | tee -a java.ini;
-    export ANSIBLE_HOST_KEY_CHECKING=False;
-	  ansible-playbook -u ${var.ec2_user} --private-key ${var.private_key} -i java.ini install_java.yaml
-    EOT
+  ami = var.ami
+  instance_type = var.instance_type
+  key_name = aws_key_pair.deployer.key_name
+  tags = {
+    Name = "my-machine-${count.index}"
+         }
+ provisioner  "remote-exec" {            # Provisioner 2 [needs SSH/Winrm connection]
+      connection {
+      type        = "ssh"
+      user        = "ubuntu"
+      private_key = "${file("~/.ssh/id_rsa")}"
+      agent       = false
+      host        = aws_instance.my-machine.public_ip       # Using my instance to connect
+      timeout     = "30s"
+    }
+      inline = [
+        "sudo apt install -y python",
+        "sudo apt install ansible -y",
+        
+      ]
   }
-  
+   provisioner "file" {                    # Provisioner 3 [needs SSH/Winrm connection]
+    source      = "*.yml"
+    destination = "/tmp/file.json"
     connection {
-    private_key = "${file(var.private_key)}"
-    user        = "ubuntu"
-  }
-
-data "template_file" "user_data" {
-  template = "${file("${path.module}/user_data.tpl")}"
+      type        = "ssh"
+      user        = "ubuntu"
+      host        = aws_instance.my-machine.public_ip
+      private_key = "${file("~/.ssh/id_rsa")}"
+      agent       = false
+      timeout     = "30s"
+    }
+  }  
 }
-```
-  user_data.tpl
-  ```
-  #!/bin/bash
-
-# Update all packages
-
-sudo yum update -y
-sudo yum install -y ecs-init
-sudo service docker start
-sudo start ecs
-
-#Adding cluster name in ecs config
-echo ECS_CLUSTER=openapi-devl-cluster >> /etc/ecs/ecs.config
-cat /etc/ecs/ecs.config | grep "ECS_CLUSTER"
 ```
 
 
