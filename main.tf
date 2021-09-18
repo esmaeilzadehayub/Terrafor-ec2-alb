@@ -1,3 +1,6 @@
+provider "aws" {      # Defining the Provider Amazon  as we need to run this on AWS   
+  region = "us-east-1"
+}
 resource "aws_lb" "app" {
   name               = "main-app-lb"
   internal           = false
