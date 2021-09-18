@@ -236,8 +236,8 @@ resource "aws_instance" "my-machine" {
       ]
   }
    provisioner "file" {                    # Provisioner 3 [needs SSH/Winrm connection]
-    source      = "*.yml"
-    destination = "/tmp/"
+    source      = "web-bucket.yaml"
+    destination = "/tmp/web-bucket.yaml"
     connection {
       type        = "ssh"
       user        = "ubuntu"
@@ -257,7 +257,7 @@ resource "aws_instance" "my-machine" {
       timeout     = "30s"
     }
       inline = [
-        "sudo ansible-playbook -i localhost   /tmp/*.yml 
+        "sudo ansible-playbook -i localhost   /tmp/web-bucket.yaml" 
         
       ]
   }
