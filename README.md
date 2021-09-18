@@ -1,10 +1,7 @@
 
-# Terrafor-ecs-aws
-Automating ECS-EC2-Type Deployments with Terraform 
+# 
+Automating EC2-Type Deployments with Terraform 
 
-
-
-![image](https://user-images.githubusercontent.com/28998255/133679876-b7fd2d14-21c2-4b2d-9f6f-0545e6e0783d.png)
 
 AWS Elastic Container Service (ECS)
 
@@ -51,12 +48,7 @@ resource "aws_internet_gateway" "internet_gateway" {
     vpc_id = aws_vpc.vpc.id
 }
 ```
-Internet gateway
-```
-resource "aws_internet_gateway" "internet_gateway" {
-    vpc_id = aws_vpc.vpc.id
-}
-```
+
 Subnet
 Within the VPC let’s add a public subnet:
 ```
@@ -129,6 +121,55 @@ Create ECR Registry:-
 
 output "repo-url" {
  value = "${aws_ecr_repository.ecr.repository_url}"
+```
+
+Creaet docker file 
+```
+FROM tiangolo/uwsgi-nginx-flask:python3.8
+RUN pip install boto3 
+
+COPY ./app /app
+```
+Create an app directory and enter in it
+
+Create a main.py file (it should be named like that and should be in your app directory) with:
+
+```
+from flask import Flask
+import boto3
+
+
+app = Flask(__name__)
+
+@app.route("/")
+def hello():
+    client = boto3.client(
+    's3',
+    aws_access_key_id=ACCESS_KEY,
+    aws_secret_access_key=SECRET_KEY,
+    aws_session_token=SESSION_TOKEN
+     )
+    return response = client.list_buckets()
+    
+
+
+if __name__ == "__main__":
+    # Only for debugging while developing
+    app.run(host='0.0.0.0', debug=True, port=80)
+````
+#######################warning####################################
+Warning
+
+ACCESS_KEY, SECRET_KEY, and SESSION_TOKEN are variables that contain your access key, secret key, and optional session token. Note that the examples above do not have hard coded credentials. We do not recommend hard coding credentials in your source code.
+#####################################################################
+
+Go to the project directory (in where your Dockerfile is, containing your app directory)
+Build your Flask image:
+```
+docker build -t myimage .
+Run a container based on your image:
+ #docker push to ECR
+docker tag e9ae3c220b23 aws_account_id.dkr.ecr.region.amazonaws.com/my-repository:tag
 ```
 
 Creating an IAM role and assigning Policy:-
