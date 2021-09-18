@@ -208,7 +208,7 @@ resource "aws_lb_target_group_attachment" "my-alb-target-group-attachment1" {
   EC2-instance.tf �
   ```python
   ###########################################################
-# AWS ECS-EC2
+# AWS EC2
 ###########################################################
 resource "aws_instance" "my-machine" {
   count = 2    # Here we are creating identical 4 machines.
