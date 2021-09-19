@@ -359,7 +359,8 @@ Go to the project folder and type “terraform plan” , this command will show 
 
 Then you can validate the terraform code with “terraform validate”
 
-Finally, deploy the resource with “terraform apply”
+Finally, deploy the resource with terraform apply
+
 #############################################
 A summary of the potential improvements to the application
 ###############################################
