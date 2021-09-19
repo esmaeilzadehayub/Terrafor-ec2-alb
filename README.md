@@ -361,4 +361,3 @@ Then you can validate the terraform code with “terraform validate”
 
 Finally, deploy the resource with “terraform apply”
 
-And thats it! After our resources are provisioned, we can visit our EC2 Dashboard, find our Load Balancer URL and visit the site running on our newly deployed ECS cluster
