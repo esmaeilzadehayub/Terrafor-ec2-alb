@@ -336,6 +336,7 @@ Route53.tf👎
 ###############################################################
 # AWS ROUTE53
 ###############################################################
+```
 resource "aws_route53_zone" "r53_private_zone" {
   name         = "vpn-devl.us.e10.c01.example.com."
   private_zone = false
