@@ -244,32 +244,6 @@ ECS-Cluster.tf
 
 ECS-ec2-instance.tf
 
-ECS-task-defination.tf
-
-ECS-services.tf
-
-ECS-ALB.tf
-
-ECS-cloudwatch.tf
-
-ECS-Route53.tf
-
-ECS-Cluster.tf:-
-
-```pyhton
-##########################################################
-# AWS ECS-CLUSTER
-#########################################################
-
-resource "aws_ecs_cluster" "cluster" {
-  name = "ecs-devl-cluster"
-  tags = {
-   name = ecs-cluster-name
-   }
-   
-  }
-  ```
-  ECS-ec2-instance.tf �
   ```python
   ###########################################################
 # AWS ECS-EC2
@@ -299,77 +273,29 @@ resource "aws_instance" "ec2_instance" {
 }
 
 provisioner "remote-exec" {
-    inline = ["sudo apt-get -qq install python -y"]
+    inline = ["sudo apt update -y",
+              "sudo  install python -y",
+              "sudo apt install -y software-properties-common",
+              "sudo apt-add-repository --yes --update ppa:ansible/ansible",
+               "sudo apt install -y ansible"
+              ]
+    connection {
+      type ="ssh"
+      user = "ubuntu"
+      host = {self.public.ip}
+      private_key = "test.pem"
+    
   }
   
 
   
    provisioner "local-exec" {
-	command = <<EOT
-    sleep 30;
-	  >java.ini;
-	  echo "[java]" | tee -a java.ini;
-	  echo "${aws_instance.ec2_instance.public_ip} ec2_user=${var.ec2_user} ec2_ssh_private_key_file=${var.private_key}" | tee -a java.ini;
-    export ANSIBLE_HOST_KEY_CHECKING=False;
-	  ansible-playbook -u ${var.ec2_user} --private-key ${var.private_key} -i java.ini install_java.yaml
-    EOT
-  }
-  
-    connection {
-    private_key = "${file(var.private_key)}"
-    user        = "ubuntu"
-  }
-
-data "template_file" "user_data" {
-  template = "${file("${path.module}/user_data.tpl")}"
-}
+	command = "ansible-playbook -u ubuntu --key-file ansible-key.pem -T 300 -i '${self.public_ip},', app.yml"  }
+ 
 ```
-  user_data.tpl
-  ```
-  #!/bin/bash
-
-# Update all packages
-
-sudo yum update -y
-sudo yum install -y ecs-init
-sudo service docker start
-sudo start ecs
-
-#Adding cluster name in ecs config
-echo ECS_CLUSTER=openapi-devl-cluster >> /etc/ecs/ecs.config
-cat /etc/ecs/ecs.config | grep "ECS_CLUSTER"
-```
-
-Autoscaling Group
-
-Autoscaling group is a collection of EC2 instances. The number of those instances is determined by scaling policies. We will create autoscaling group using a launch template.
-Before we will launch container instances and register them into a cluster, we have to create an IAM role for those instances to use when they are launched:
-```
-resource "aws_launch_configuration" "ecs_launch_config" {
-    image_id             = "ami-094d4d00fd7462815"
-    iam_instance_profile = aws_iam_instance_profile.ecs_agent.name
-    security_groups      = [aws_security_group.ecs_sg.id]
-    user_data            = "#!/bin/bash\necho ECS_CLUSTER=my-cluster >> /etc/ecs/ecs.config"
-    instance_type        = "t2.micro"
-}
-
-resource "aws_autoscaling_group" "failure_analysis_ecs_asg" {
-    name                      = "asg"
-    vpc_zone_identifier       = [aws_subnet.pub_subnet.id]
-    launch_configuration      = aws_launch_configuration.ecs_launch_config.name
-
-    desired_capacity          = 2
-    min_size                  = 1
-    max_size                  = 10
-    health_check_grace_period = 300
-    health_check_type         = "EC2"
-}
-```
-
-
-ECS-ALB.tf�
+EC2ALB.tf�
 ```####################################################################
-# AWS ECS-ALB
+# AWS-ALB
 #####################################################################
 
 resource "aws_lb" "loadbalancer" {
@@ -411,20 +337,12 @@ resource "aws_lb_listener" "lb_listener" {
   protocol          = "HTTP"
 }
 ```
-ECS-cloudwatch.tf👎
 ```
-resource "aws_cloudwatch_log_group" "log_group" {
-  name = "openapi-devl-cw"
-    tags = {
-    Environment = "production"
-  }
-}
-```
-ECS-Route53.tf👎
+Route53.tf👎
 
 ```
 ###############################################################
-# AWS ECS-ROUTE53
+# AWS ROUTE53
 ###############################################################
 resource "aws_route53_zone" "r53_private_zone" {
   name         = "vpn-devl.us.e10.c01.example.com."
@@ -451,17 +369,3 @@ Then you can validate the terraform code with “terraform validate”
 Finally, deploy the resource with “terraform apply”
 
 And thats it! After our resources are provisioned, we can visit our EC2 Dashboard, find our Load Balancer URL and visit the site running on our newly deployed ECS cluster
-
-
-
-
-
-
-
-
-
-
-
-
-  
-  
