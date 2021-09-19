@@ -371,4 +371,4 @@ Finally, deploy the resource with terraform apply
 1. We can use S3 bucker for saving application file  to download it from S3(data has to be encrypt by EKS) to move to EC2
 2. To scale up services we can use autoscaling services on AWS.
 3. To maintain *.tfstae for terraform we should create a s3 buackt to save all state in Terraform by cloud solution .
-4. We can desgin your service bt EKS/ECS on AWS
+4. We can desgin your service with EKS/ECS services on AWS
