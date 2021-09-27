@@ -3,23 +3,22 @@
 Automating EC2-Type Deployments with Terraform 
 
 
-# create virtal private cloud 
-#Creating ECR registry for storing the docker image.
+**Create virtal private cloud**
+**Creating ECR registry for storing the docker image**
 
-#Creating Dockerfile and building the image.
+**Creating Dockerfile and building the image**
 
-#Creating terraform code for IAM role
+**Creating terraform code for IAM role**
 
-#Creating tf file for EC2-instance
+**Creating tf file for EC2-instance**
 
+**Creating Application Load Balancer**
 
-#Creating Application Load Balancer
+**Creating Route 53 hosted zone**
 
-#Creating Route 53 hosted zone
+**Creating cloudwatch log group**
 
-#Creating cloudwatch log group
-
-#Creating terraform code for IAM role
+**Creating terraform code for IAM role**
 
 Create Virtual private cloud:
 ```
@@ -34,7 +33,7 @@ resource "aws_vpc" "vpc" {
     }
 }
 ```
-Internet gateway
+**Internet gateway**
 ```
 resource "aws_internet_gateway" "internet_gateway" {
     vpc_id = aws_vpc.vpc.id
@@ -168,73 +167,65 @@ Creating an IAM role and assigning Policy:-
 Roles are a really brilliant part of the aws stack. Inside of IAM or identity access and management, you can create roles. These are collections of privileges. I’m allowed to use this S3 bucket, but not others. I can use EC2, but not Athena. And so forth. There are some special policies already created just for ECS and you’ll need roles to use them.
 These roles will be applied at the instance level, so your ecs host doesn’t have to pass credentials around
 
-ecs-instance-role
-
-ecs-service-role
-
-ecs-instance-profile
-
-
 ```python
-resource "aws_iam_role" "ecs-instance-role" {
-  name = "ecs-instance-role"
-  path = "/"
-  assume_role_policy = "${data.aws_iam_policy_document.ecs-instance-policy.json}"
+resource "aws_iam_role" "test_role" {
+  name = "test_role"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      },
+      "Effect": "Allow",
+      "Sid": ""
+    }
+  ]
 }
+EOF
 
-
-
-data "aws_iam_policy_document" "ecs-instance-policy" {
-   statement {
-  actions = ["sts:AssumeRole"]
-  principals {
-  type = "Service"
-  identifiers = ["ec2.amazonaws.com"]
+  tags = {
+      tag-key = "tag-value"
   }
- }
+}
+resource "aws_iam_instance_profile" "test_profile" {
+  name = "test_profile"
+  role = "${aws_iam_role.test_role.name}"
+}
+resource "aws_iam_role_policy" "test_policy" {
+  name = "test_policy"
+  role = "${aws_iam_role.test_role.id}"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "s3:*"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+}
+resource "aws_instance" "role-test" {
+  ami = "ami-0bbe6b35405ecebdb"
+  instance_type = "t2.micro"
+  iam_instance_profile = "${aws_iam_instance_profile.test_profile.name}"
+  key_name = "mytestpubkey"
 }
 
-resource "aws_iam_role_policy_attachment" "ecs-instance-role-attachment" {
-   role = "${aws_iam_role.ecs-instance-role.name}"
-   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
-}
 
-resource "aws_iam_instance_profile" "ecs-instance-profile" {
-  name = "ecs-instance-profile"
-  path = "/"
-  role = "${aws_iam_role.ecs-instance-role.id}"
-  provisioner "local-exec" {
-  command = "sleep 60"
- }
-}
 
-resource "aws_iam_role" "ecs-service-role" {
-  name = "ecs-service-role"
-  path = "/"
-  assume_role_policy = "${data.aws_iam_policy_document.ecs-service-policy.json}"
-}
-
-resource "aws_iam_role_policy_attachment" "ecs-service-role-attachment" {
-  role = "${aws_iam_role.ecs-service-role.name}"
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceRole"
-}
-
-data "aws_iam_policy_document" "ecs-service-policy" {
-  statement {
-  actions = ["sts:AssumeRole"]
-  principals {
-  type = "Service"
-  identifiers = ["ecs.amazonaws.com"]
-  }
- }
-}
 ```
 
-Elastic container service (ECS-EC2-Type):-
-Here we are going to create the ECS cluster with launch type as EC2-TYPE. This involves the following resource.
-ECS-Cluster.tf
-
-ECS-ec2-instance.tf
+**EC2-instance.tf**
 
   ```python
   ###########################################################
@@ -330,7 +321,7 @@ resource "aws_lb_listener" "lb_listener" {
 }
 ```
 ```
-Route53.tf👎
+**Route53.tf**
 
 ```
 ###############################################################
@@ -359,6 +350,16 @@ Go to the project folder and type “terraform plan” , this command will show 
 
 Then you can validate the terraform code with “terraform validate”
 
-Finally, deploy the resource with “terraform apply”
+Finally, deploy the resource with terraform apply
 
-And thats it! After our resources are provisioned, we can visit our EC2 Dashboard, find our Load Balancer URL and visit the site running on our newly deployed ECS cluster
+#############################################
+
+**A summary of the potential improvements to the application**
+
+###############################################
+
+
+1. We can use S3 bucker for saving application file  to download it from S3(data has to be encrypt by EKS) to move to EC2
+2. To scale up services we can use autoscaling services on AWS.
+3. To maintain *.tfstae for terraform we should create a s3 buackt to save all Terraform's state  by cloud solution .
+4. We can desgin your service with EKS/ECS services on AWS
